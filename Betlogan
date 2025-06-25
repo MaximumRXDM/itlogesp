@@ -1,0 +1,194 @@
+local players = game:GetService("Players")
+local collectionService = game:GetService("CollectionService")
+local localPlayer = players.LocalPlayer
+
+local eggChances = {
+    ["Mythic Egg"] = {
+        ["Grey Mouse"] = 37.5, ["Brown Mouse"] = 26.79, ["Squirrel"] = 26.79, ["Red Giant Ant"] = 8.93, ["Red Fox"] = 0,
+    },
+    ["Legendary Egg"] = {
+        ["Grey Mouse"] = 37.5, ["Brown Mouse"] = 26.79, ["Squirrel"] = 26.79, ["Red Giant Ant"] = 8.93, ["Red Fox"] = 0,
+    },
+    ["Bug Egg"] = {
+        ["Snail"] = 40, ["Giant Ant"] = 35, ["Caterpillar"] = 25, ["Praying Mantis"] = 0, ["Dragon Fly"] = 0,
+    },
+    ["Night Egg"] = {
+        ["Hedgehog"] = 47, ["Mole"] = 23.5, ["Frog"] = 21.16, ["Echo Frog"] = 8.35, ["Night Owl"] = 0, ["Raccoon"] = 0,
+    },
+    ["Bee Egg"] = {
+        ["Bee"] = 65, ["Honey Bee"] = 20, ["Bear Bee"] = 10, ["Petal Bee"] = 5, ["Queen Bee"] = 0,
+    },
+    ["Anti Bee Egg"] = {
+        ["Wasp"] = 55, ["Tarantula Hawk"] = 31, ["Moth"] = 14, ["Butterfly"] = 0, ["Disco Bee"] = 0,
+    },
+    ["Paradise Egg"] = {
+        ["Ostrich"] = 40, ["Peacock"] = 30, ["Capybara"] = 21, ["Scarlet Macaw"] = 9, ["Mimic Octopus"] = 0,
+    }
+}
+
+local realESP = {
+    ["Common Egg"] = true, ["Uncommon Egg"] = true, ["Rare Egg"] = true,
+    ["Common Summer Egg"] = true, ["Rare Summer Egg"] = true
+}
+
+local displayedEggs = {}
+local debounce = false
+
+local function weightedRandom(options)
+    local valid = {}
+    for pet, chance in pairs(options) do
+        if chance > 0 then
+            table.insert(valid, {pet = pet, chance = chance})
+        end
+    end
+    if #valid == 0 then return nil end
+
+    local total = 0
+    for _, data in ipairs(valid) do total += data.chance end
+
+    local roll = math.random() * total
+    local cumulative = 0
+    for _, data in ipairs(valid) do
+        cumulative += data.chance
+        if roll <= cumulative then return data.pet end
+    end
+    return valid[1].pet
+end
+
+local function getNonRepeatingRandomPet(eggName, lastPet)
+    local pool = eggChances[eggName]
+    if not pool then return nil end
+
+    local tries = 0
+    local selectedPet = lastPet
+    while tries < 5 do
+        local pet = weightedRandom(pool)
+        if not pet then return nil end
+        if pet ~= lastPet or math.random() < 0.3 then
+            selectedPet = pet
+            break
+        end
+        tries += 1
+    end
+    return selectedPet
+end
+
+local function createEspGui(object, labelText)
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "FakePetESP"
+    billboard.Adornee = object:FindFirstChildWhichIsA("BasePart") or object.PrimaryPart or object
+    billboard.Size = UDim2.new(0, 200, 0, 50)
+    billboard.StudsOffset = Vector3.new(0, 2.5, 0)
+    billboard.AlwaysOnTop = true
+
+    local label = Instance.new("TextLabel")
+    label.Name = "PetLabel"
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.BackgroundTransparency = 1
+    label.TextColor3 = Color3.new(1, 1, 1)
+    label.TextStrokeTransparency = 0
+    label.TextScaled = true
+    label.Font = Enum.Font.SourceSansBold
+    label.Text = labelText
+    label.Parent = billboard
+
+    billboard.Parent = object
+    return billboard
+end
+
+local function addESP(egg)
+    if egg:GetAttribute("OWNER") ~= localPlayer.Name then return end
+    local eggName = egg:GetAttribute("EggName")
+    local objectId = egg:GetAttribute("OBJECT_UUID")
+    if not eggName or not objectId or displayedEggs[objectId] then return end
+
+    local labelText, firstPet
+    if realESP[eggName] then
+        labelText = eggName
+    else
+        firstPet = getNonRepeatingRandomPet(eggName, nil)
+        labelText = eggName .. " | " .. (firstPet or "?")
+    end
+
+    local espGui = createEspGui(egg, labelText)
+
+    displayedEggs[objectId] = {
+        egg = egg,
+        gui = espGui,
+        label = espGui:FindFirstChild("PetLabel"),
+        eggName = eggName,
+        lastPet = firstPet
+    }
+end
+
+local function removeESP(egg)
+    local objectId = egg:GetAttribute("OBJECT_UUID")
+    if objectId and displayedEggs[objectId] then
+        displayedEggs[objectId].gui:Destroy()
+        displayedEggs[objectId] = nil
+    end
+end
+
+for _, egg in collectionService:GetTagged("PetEggServer") do
+    addESP(egg)
+end
+
+collectionService:GetInstanceAddedSignal("PetEggServer"):Connect(addESP)
+collectionService:GetInstanceRemovedSignal("PetEggServer"):Connect(removeESP)
+
+-- GUI BUTTON SETUP
+local gui = Instance.new("ScreenGui")
+gui.Name = "RandomizerGui"
+gui.ResetOnSpawn = false
+gui.Parent = localPlayer:WaitForChild("PlayerGui")
+
+local button = Instance.new("TextButton")
+button.Size = UDim2.new(0, 150, 0, 40)
+button.Position = UDim2.new(1, -160, 0, 40)
+button.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+button.TextColor3 = Color3.new(1, 1, 1)
+button.Text = "ðŸŽ² Randomize"
+button.TextScaled = true
+button.Draggable = true
+button.Active = true
+button.Parent = gui
+
+-- Cooldown Label positioned *below* button
+local timer = Instance.new("TextLabel")
+timer.Size = UDim2.new(0, 150, 0, 30)
+timer.Position = UDim2.new(1, -160, 0, 85) -- 40 (button Y) + 40 (button height) + 5 gap
+timer.BackgroundTransparency = 1
+timer.TextColor3 = Color3.fromRGB(200, 200, 200)
+timer.TextScaled = true
+timer.Text = ""
+timer.Visible = false
+timer.Parent = gui
+
+-- Cooldown and Self-Restart
+local function cooldownAndRestart(seconds)
+    debounce = true
+    timer.Visible = true
+    for i = seconds, 1, -1 do
+        timer.Text = "Cooldown: " .. i
+        wait(1)
+    end
+    timer.Visible = false
+    debounce = false
+
+    -- ðŸ” Kill and Respawn the script
+    gui:Destroy()
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if obj:IsA("BillboardGui") and obj.Name == "FakePetESP" then
+            obj:Destroy()
+        end
+    end
+
+    -- Re-run the same script again (self-replicating)
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/FatalLoots/EggESP/refs/heads/main/EGGESP"))()
+end
+
+-- Button handler
+button.MouseButton1Click:Connect(function()
+    if debounce then return end
+    cooldownAndRestart(30)
+end)
