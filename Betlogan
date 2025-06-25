@@ -3,10 +3,19 @@ local collectionService = game:GetService("CollectionService")
 local localPlayer = players.LocalPlayer
 
 local eggChances = {
-    ["Mythic Egg"] = {
-        ["Grey Mouse"] = 37.5, ["Brown Mouse"] = 26.79, ["Squirrel"] = 26.79, ["Red Giant Ant"] = 8.93, ["Red Fox"] = 0,
+    ["Common Egg"] = {
+        ["Dog"] = 33, ["Bunny"] = 33, ["Golden Lab"] = 33,
+    },
+    ["Uncommon Egg"] = {
+        ["Black Bunny"] = 25, ["Chicken"] = 25, ["Cat"] = 25, ["Deer"] = 25,
+    },
+    ["Rare Egg"] = {
+        ["Orange Tabby"] = 33.33, ["Spotted Deer"] = 25, ["Pig"] = 16.67, ["Rooster"] = 16.67, ["Monkey"] = 8.33,
     },
     ["Legendary Egg"] = {
+        ["Cow"] = 42.55, ["Silver Monkey"] = 42.55, ["Sea Otter"] = 10.64, ["Turtle"] = 2.13, ["Polar Bear"] = 2.13,
+    },
+    ["Mythic Egg"] = {
         ["Grey Mouse"] = 37.5, ["Brown Mouse"] = 26.79, ["Squirrel"] = 26.79, ["Red Giant Ant"] = 8.93, ["Red Fox"] = 0,
     },
     ["Bug Egg"] = {
@@ -20,6 +29,12 @@ local eggChances = {
     },
     ["Anti Bee Egg"] = {
         ["Wasp"] = 55, ["Tarantula Hawk"] = 31, ["Moth"] = 14, ["Butterfly"] = 0, ["Disco Bee"] = 0,
+    },
+    ["Common Summer Egg"] = {
+        ["Starfish"] = 50, ["Seafull"] = 25, ["Crab"] = 25,
+    },
+    ["Rare Summer Egg"] = {
+        ["Flamingo"] = 30, ["Toucan"] = 25, ["Sea Turtle"] = 20, ["Orangutan"] = 15, ["Seal"] = 10,
     },
     ["Paradise Egg"] = {
         ["Ostrich"] = 40, ["Peacock"] = 30, ["Capybara"] = 21, ["Scarlet Macaw"] = 9, ["Mimic Octopus"] = 0,
@@ -175,7 +190,7 @@ local function cooldownAndRestart(seconds)
     timer.Visible = false
     debounce = false
 
-    -- ðŸ” Kill and Respawn the script
+    -- 🔁 Kill and Respawn the script
     gui:Destroy()
     for _, obj in pairs(workspace:GetDescendants()) do
         if obj:IsA("BillboardGui") and obj.Name == "FakePetESP" then
