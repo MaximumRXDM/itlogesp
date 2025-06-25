@@ -184,7 +184,7 @@ local function cooldownAndRestart(seconds)
     end
 
     -- Re-run the same script again (self-replicating)
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/FatalLoots/EggESP/refs/heads/main/EGGESP"))()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/MaximumRXDM/itlogesp/refs/heads/main/Betlogan"))()
 end
 
 -- Button handler
