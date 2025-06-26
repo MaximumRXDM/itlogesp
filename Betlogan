@@ -1,43 +1,51 @@
 local players = game:GetService("Players")
 local collectionService = game:GetService("CollectionService")
+local httpService = game:GetService("HttpService")
 local localPlayer = players.LocalPlayer
 
+-- Egg chances (updated)
 local eggChances = {
-    ["Common Egg"] = {
-        ["Dog"] = 33, ["Bunny"] = 33, ["Golden Lab"] = 33,
-    },
-    ["Uncommon Egg"] = {
-        ["Black Bunny"] = 25, ["Chicken"] = 25, ["Cat"] = 25, ["Deer"] = 25,
-    },
+    ["Common Egg"] = { ["Dog"] = 33, ["Bunny"] = 33, ["Golden Lab"] = 33 },
+    ["Uncommon Egg"] = { ["Black Bunny"] = 25, ["Chicken"] = 25, ["Cat"] = 25, ["Deer"] = 25 },
     ["Rare Egg"] = {
-        ["Orange Tabby"] = 33.33, ["Spotted Deer"] = 25, ["Pig"] = 16.67, ["Rooster"] = 16.67, ["Monkey"] = 8.33,
+        ["Orange Tabby"] = 33.33, ["Spotted Deer"] = 25, ["Pig"] = 16.67,
+        ["Rooster"] = 16.67, ["Monkey"] = 8.33
     },
     ["Legendary Egg"] = {
-        ["Cow"] = 42.55, ["Silver Monkey"] = 42.55, ["Sea Otter"] = 10.64, ["Turtle"] = 2.13, ["Polar Bear"] = 2.13,
+        ["Cow"] = 42.55, ["Silver Monkey"] = 42.55,
+        ["Sea Otter"] = 10.64, ["Turtle"] = 2.13, ["Polar Bear"] = 2.13
     },
     ["Mythic Egg"] = {
-        ["Grey Mouse"] = 37.5, ["Brown Mouse"] = 26.79, ["Squirrel"] = 26.79, ["Red Giant Ant"] = 8.93, ["Red Fox"] = 0,
+        ["Grey Mouse"] = 37.5, ["Brown Mouse"] = 26.79,
+        ["Squirrel"] = 26.79, ["Red Giant Ant"] = 8.93, ["Red Fox"] = 0
     },
     ["Bug Egg"] = {
-        ["Snail"] = 40, ["Giant Ant"] = 35, ["Caterpillar"] = 25, ["Praying Mantis"] = 0, ["Dragon Fly"] = 0,
+        ["Snail"] = 40, ["Giant Ant"] = 35,
+        ["Caterpillar"] = 25, ["Praying Mantis"] = 0, ["Dragon Fly"] = 0
     },
     ["Night Egg"] = {
-        ["Hedgehog"] = 47, ["Mole"] = 23.5, ["Frog"] = 21.16, ["Echo Frog"] = 8.35, ["Night Owl"] = 0, ["Raccoon"] = 0,
+        ["Hedgehog"] = 47, ["Mole"] = 23.5,
+        ["Frog"] = 21.16, ["Echo Frog"] = 8.35,
+        ["Night Owl"] = 0, ["Raccoon"] = 0
     },
     ["Bee Egg"] = {
-        ["Bee"] = 65, ["Honey Bee"] = 20, ["Bear Bee"] = 10, ["Petal Bee"] = 5, ["Queen Bee"] = 0,
+        ["Bee"] = 65, ["Honey Bee"] = 20,
+        ["Bear Bee"] = 10, ["Petal Bee"] = 5, ["Queen Bee"] = 0
     },
     ["Anti Bee Egg"] = {
-        ["Wasp"] = 55, ["Tarantula Hawk"] = 31, ["Moth"] = 14, ["Butterfly"] = 0, ["Disco Bee"] = 0,
+        ["Wasp"] = 55, ["Tarantula Hawk"] = 31,
+        ["Moth"] = 14, ["Butterfly"] = 0, ["Disco Bee"] = 0
     },
     ["Common Summer Egg"] = {
-        ["Starfish"] = 50, ["Seafull"] = 25, ["Crab"] = 25,
+        ["Starfish"] = 50, ["Seafull"] = 25, ["Crab"] = 25
     },
     ["Rare Summer Egg"] = {
-        ["Flamingo"] = 30, ["Toucan"] = 25, ["Sea Turtle"] = 20, ["Orangutan"] = 15, ["Seal"] = 10,
+        ["Flamingo"] = 30, ["Toucan"] = 25, ["Sea Turtle"] = 20,
+        ["Orangutan"] = 15, ["Seal"] = 10
     },
     ["Paradise Egg"] = {
-        ["Ostrich"] = 40, ["Peacock"] = 30, ["Capybara"] = 21, ["Scarlet Macaw"] = 9, ["Mimic Octopus"] = 0,
+        ["Ostrich"] = 40, ["Peacock"] = 30,
+        ["Capybara"] = 21, ["Scarlet Macaw"] = 9, ["Mimic Octopus"] = 0
     }
 }
 
@@ -49,20 +57,40 @@ local realESP = {
 local displayedEggs = {}
 local debounce = false
 
+-- Load/Save toggle settings
+local settingsFile = "AutoRandomizerSettings.json"
+local toggleSettings = { AutoRandomizer = false, AutoStop = false }
+
+local function loadSettings()
+    if isfile and isfile(settingsFile) then
+        local ok, decoded = pcall(function()
+            return httpService:JSONDecode(readfile(settingsFile))
+        end)
+        if ok and type(decoded) == "table" then
+            toggleSettings = decoded
+        end
+    end
+end
+
+local function saveSettings()
+    if writefile then
+        writefile(settingsFile, httpService:JSONEncode(toggleSettings))
+    end
+end
+
+loadSettings()
+
+-- Random picker
 local function weightedRandom(options)
-    local valid = {}
+    local valid, total = {}, 0
     for pet, chance in pairs(options) do
         if chance > 0 then
             table.insert(valid, {pet = pet, chance = chance})
+            total += chance
         end
     end
     if #valid == 0 then return nil end
-
-    local total = 0
-    for _, data in ipairs(valid) do total += data.chance end
-
-    local roll = math.random() * total
-    local cumulative = 0
+    local roll, cumulative = math.random() * total, 0
     for _, data in ipairs(valid) do
         cumulative += data.chance
         if roll <= cumulative then return data.pet end
@@ -73,9 +101,7 @@ end
 local function getNonRepeatingRandomPet(eggName, lastPet)
     local pool = eggChances[eggName]
     if not pool then return nil end
-
-    local tries = 0
-    local selectedPet = lastPet
+    local tries, selectedPet = 0, lastPet
     while tries < 5 do
         local pet = weightedRandom(pool)
         if not pet then return nil end
@@ -152,10 +178,9 @@ collectionService:GetInstanceAddedSignal("PetEggServer"):Connect(addESP)
 collectionService:GetInstanceRemovedSignal("PetEggServer"):Connect(removeESP)
 
 -- GUI BUTTON SETUP
-local gui = Instance.new("ScreenGui")
+local gui = Instance.new("ScreenGui", localPlayer:WaitForChild("PlayerGui"))
 gui.Name = "RandomizerGui"
 gui.ResetOnSpawn = false
-gui.Parent = localPlayer:WaitForChild("PlayerGui")
 
 local button = Instance.new("TextButton")
 button.Size = UDim2.new(0, 150, 0, 40)
@@ -168,18 +193,46 @@ button.Draggable = true
 button.Active = true
 button.Parent = gui
 
--- Cooldown Label positioned *below* button
-local timer = Instance.new("TextLabel")
+-- Cooldown label
+local timer = Instance.new("TextLabel", gui)
 timer.Size = UDim2.new(0, 150, 0, 30)
-timer.Position = UDim2.new(1, -160, 0, 85) -- 40 (button Y) + 40 (button height) + 5 gap
+timer.Position = UDim2.new(1, -160, 0, 85)
 timer.BackgroundTransparency = 1
 timer.TextColor3 = Color3.fromRGB(200, 200, 200)
 timer.TextScaled = true
 timer.Text = ""
 timer.Visible = false
-timer.Parent = gui
 
--- Cooldown and Self-Restart
+-- Toggles below
+local autoToggle = Instance.new("TextButton", gui)
+autoToggle.Size = UDim2.new(0, 150, 0, 30)
+autoToggle.Position = UDim2.new(1, -160, 0, 120)
+autoToggle.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+autoToggle.TextColor3 = Color3.new(1, 1, 1)
+autoToggle.TextScaled = true
+autoToggle.Text = "Auto Randomizer: " .. (toggleSettings.AutoRandomizer and "ON" or "OFF")
+
+local fakeToggle = Instance.new("TextButton", gui)
+fakeToggle.Size = UDim2.new(0, 150, 0, 30)
+fakeToggle.Position = UDim2.new(1, -160, 0, 155)
+fakeToggle.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+fakeToggle.TextColor3 = Color3.new(1, 1, 1)
+fakeToggle.TextScaled = true
+fakeToggle.Text = "Auto Stop: " .. (toggleSettings.AutoStop and "ON" or "OFF")
+
+autoToggle.MouseButton1Click:Connect(function()
+    toggleSettings.AutoRandomizer = not toggleSettings.AutoRandomizer
+    autoToggle.Text = "Auto Randomizer: " .. (toggleSettings.AutoRandomizer and "ON" or "OFF")
+    saveSettings()
+end)
+
+fakeToggle.MouseButton1Click:Connect(function()
+    toggleSettings.AutoStop = not toggleSettings.AutoStop
+    fakeToggle.Text = "Auto Stop: " .. (toggleSettings.AutoStop and "ON" or "OFF")
+    saveSettings()
+end)
+
+-- Respawn function
 local function cooldownAndRestart(seconds)
     debounce = true
     timer.Visible = true
@@ -190,7 +243,6 @@ local function cooldownAndRestart(seconds)
     timer.Visible = false
     debounce = false
 
-    -- 🔁 Kill and Respawn the script
     gui:Destroy()
     for _, obj in pairs(workspace:GetDescendants()) do
         if obj:IsA("BillboardGui") and obj.Name == "FakePetESP" then
@@ -198,12 +250,26 @@ local function cooldownAndRestart(seconds)
         end
     end
 
-    -- Re-run the same script again (self-replicating)
     loadstring(game:HttpGet("https://raw.githubusercontent.com/MaximumRXDM/itlogesp/refs/heads/main/Betlogan"))()
 end
 
--- Button handler
+-- Manual randomizer
 button.MouseButton1Click:Connect(function()
     if debounce then return end
     cooldownAndRestart(30)
 end)
+
+-- Auto randomizer
+if toggleSettings.AutoRandomizer then
+    task.spawn(function()
+        while toggleSettings.AutoRandomizer do
+            if not debounce then
+                cooldownAndRestart(30)
+            end
+            for i = 1, 30 do
+                if not toggleSettings.AutoRandomizer then break end
+                wait(1)
+            end
+        end
+    end)
+end
