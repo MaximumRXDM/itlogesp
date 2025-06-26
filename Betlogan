@@ -184,7 +184,7 @@ local function cooldownAndRestart(seconds)
     debounce = true
     timer.Visible = true
     for i = seconds, 1, -1 do
-        timer.Text = "Cooldown: " .. i
+        timer.Text = "Changing in: " .. i
         wait(1)
     end
     timer.Visible = false
