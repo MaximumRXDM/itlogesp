@@ -177,7 +177,7 @@ info.TextScaled = true
 info.MouseButton1Click:Connect(function()
     game:GetService("StarterGui"):SetCore("SendNotification", {
         Title = "Info",
-        Text = "Auto Stop when found; Raccoon, Dragonfly, Queen Bee, Red Fox, Disco bee and Butterfly.",
+        Text = "Auto Hatch; Raccoon, Dragonfly, Queen Bee, Red Fox, Disco bee and Butterfly.",
         Duration = 5
     })
 end)
