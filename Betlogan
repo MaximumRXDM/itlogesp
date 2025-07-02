@@ -141,7 +141,7 @@ stopBtn.MouseButton1Click:Connect(function()
     stopBtn.Text = autoStopOn and "🛑 Auto Hatch: ON" or "🛑 Auto Hatch: OFF"
 end)
 
--- Info Button "?"
+-- Info Button
 local info = Instance.new("TextButton", gui)
 info.Size = UDim2.new(0, 30, 0, 40)
 info.Position = UDim2.new(1, -35, 0, 0)
@@ -167,7 +167,7 @@ autoBtn.TextColor3 = Color3.new(1, 1, 1)
 autoBtn.Text = "🟢 Auto Randomizer: ON"
 autoBtn.TextScaled = true
 
--- Countdown Text
+-- Countdown Timer
 local timer = Instance.new("TextLabel", gui)
 timer.Size = UDim2.new(0, 150, 0, 30)
 timer.Position = UDim2.new(1, -190, 0, 90)
@@ -176,6 +176,22 @@ timer.TextColor3 = Color3.fromRGB(200, 200, 200)
 timer.Text = ""
 timer.TextScaled = true
 timer.Visible = false
+
+-- Anti-AFK Toggle Button
+local afkEnabled = true
+
+local afkBtn = Instance.new("TextButton", gui)
+afkBtn.Size = UDim2.new(0, 150, 0, 40)
+afkBtn.Position = UDim2.new(1, -190, 0, 135)
+afkBtn.BackgroundColor3 = Color3.fromRGB(65, 65, 65)
+afkBtn.TextColor3 = Color3.new(1, 1, 1)
+afkBtn.Text = "✅ Anti-AFK: ON"
+afkBtn.TextScaled = true
+
+afkBtn.MouseButton1Click:Connect(function()
+    afkEnabled = not afkEnabled
+    afkBtn.Text = afkEnabled and "✅ Anti-AFK: ON" or "❌ Anti-AFK: OFF"
+end)
 
 -- Auto Countdown Logic
 coroutine.wrap(function()
@@ -211,4 +227,16 @@ autoBtn.MouseButton1Click:Connect(function()
     autoRunning = not autoRunning
     autoBtn.Text = autoRunning and "🟢 Auto Randomizer: ON" or "🔴 Auto Randomizer: OFF"
     timer.Visible = autoRunning
+end)
+
+-- Anti-AFK Logic
+local vu = game:GetService("VirtualUser")
+local cam = workspace.CurrentCamera
+
+players.LocalPlayer.Idled:Connect(function()
+    if afkEnabled then
+        vu:Button2Down(Vector2.new(0, 0), cam.CFrame)
+        task.wait(1)
+        vu:Button2Up(Vector2.new(0, 0), cam.CFrame)
+    end
 end)
