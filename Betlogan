@@ -12,7 +12,6 @@ local eggChances = {
     ["Night Egg"] = {["Hedgehog"] = 47, ["Mole"] = 23.5, ["Frog"] = 21.16, ["Echo Frog"] = 8.35, ["Night Owl"] = 0, ["Raccoon"] = 0},
     ["Bee Egg"] = {["Bee"] = 65, ["Honey Bee"] = 20, ["Bear Bee"] = 10, ["Petal Bee"] = 5, ["Queen Bee"] = 0},
     ["Anti Bee Egg"] = {["Wasp"] = 55, ["Tarantula Hawk"] = 31, ["Moth"] = 14, ["Butterfly"] = 0, ["Disco Bee"] = 0},
-    ["Premium Anti Bee Egg"] = {["Wasp"] = 35, ["Tarantula Hawk"] = 51, ["Moth"] = 14, ["Butterfly"] = 0, ["Disco Bee"] = 0},
     ["Common Summer Egg"] = {["Starfish"] = 50, ["Seafull"] = 25, ["Crab"] = 25},
     ["Rare Summer Egg"] = {["Flamingo"] = 30, ["Toucan"] = 25, ["Sea Turtle"] = 20, ["Orangutan"] = 15, ["Seal"] = 10},
     ["Paradise Egg"] = {["Ostrich"] = 43, ["Peacock"] = 33, ["Capybara"] = 24, ["Scarlet Macaw"] = 0, ["Mimic Octopus"] = 0},
@@ -66,12 +65,14 @@ local function createEspGui(object, labelText)
     local billboard = Instance.new("BillboardGui")
     billboard.Name = "FakePetESP"
     billboard.Adornee = object:FindFirstChildWhichIsA("BasePart") or object.PrimaryPart or object
-    billboard.Size = UDim2.new(0, 200, 0, 50)
+    billboard.Size = UDim2.new(0, 200, 0, 60)
     billboard.StudsOffset = Vector3.new(0, 2.5, 0)
     billboard.AlwaysOnTop = true
 
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, 0, 1, 0)
+    label.Name = "PetName"
+    label.Size = UDim2.new(1, 0, 0.5, 0)
+    label.Position = UDim2.new(0, 0, 0, 0)
     label.BackgroundTransparency = 1
     label.TextColor3 = Color3.new(1, 1, 1)
     label.TextStrokeTransparency = 0
@@ -79,6 +80,28 @@ local function createEspGui(object, labelText)
     label.Font = Enum.Font.SourceSansBold
     label.Text = labelText
     label.Parent = billboard
+
+    local statsLabel = Instance.new("TextLabel")
+    statsLabel.Name = "FakeStats"
+    statsLabel.Size = UDim2.new(1, 0, 0.5, 0)
+    statsLabel.Position = UDim2.new(0, 0, 0.5, 0)
+    statsLabel.BackgroundTransparency = 1
+    statsLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    statsLabel.TextScaled = true
+    statsLabel.Font = Enum.Font.SourceSans
+    statsLabel.TextStrokeTransparency = 0.5
+
+    local rng = math.random(1, 100)
+    local weight, age
+    if rng <= 85 then
+        weight = math.random(8, 14)
+        age = math.random(35, 50)
+    else
+        weight = math.random(15, 40)
+        age = math.random(20, 45)
+    end
+    statsLabel.Text = tostring(weight) .. "kg | Predict: Age " .. tostring(age)
+    statsLabel.Parent = billboard
 
     billboard.Parent = object
     return billboard
@@ -102,7 +125,7 @@ local function addESP(egg)
     displayedEggs[objectId] = {
         egg = egg,
         gui = espGui,
-        label = espGui:FindFirstChild("TextLabel"),
+        label = espGui:FindFirstChild("PetName"),
         eggName = eggName,
         lastPet = firstPet
     }
@@ -168,7 +191,7 @@ autoBtn.TextColor3 = Color3.new(1, 1, 1)
 autoBtn.Text = "🟢 Auto Randomizer: ON"
 autoBtn.TextScaled = true
 
--- Countdown Timer
+-- Countdown
 local timer = Instance.new("TextLabel", gui)
 timer.Size = UDim2.new(0, 150, 0, 30)
 timer.Position = UDim2.new(1, -190, 0, 90)
@@ -194,7 +217,7 @@ afkBtn.MouseButton1Click:Connect(function()
     afkBtn.Text = afkEnabled and "✅ Anti-AFK: ON" or "❌ Anti-AFK: OFF"
 end)
 
--- Auto Countdown Logic
+-- Auto Randomizer Countdown
 coroutine.wrap(function()
     while true do
         if autoRunning then
@@ -230,7 +253,7 @@ autoBtn.MouseButton1Click:Connect(function()
     timer.Visible = autoRunning
 end)
 
--- Anti-AFK Logic
+-- Anti-AFK
 local vu = game:GetService("VirtualUser")
 local cam = workspace.CurrentCamera
 
