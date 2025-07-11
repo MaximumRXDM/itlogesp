@@ -10,13 +10,13 @@ GUI:CreateMain({
 })
 
 local tab = GUI:CreateTab("ESP")
-
 local players = game:GetService("Players")
 local collectionService = game:GetService("CollectionService")
 local vu = game:GetService("VirtualUser")
 local cam = workspace.CurrentCamera
 local localPlayer = players.LocalPlayer
 
+-- Egg data
 local eggChances = {
     ["Common Egg"] = {["Dog"] = 33, ["Bunny"] = 33, ["Golden Lab"] = 33},
     ["Uncommon Egg"] = {["Black Bunny"] = 25, ["Chicken"] = 25, ["Cat"] = 25, ["Deer"] = 25},
@@ -30,8 +30,12 @@ local eggChances = {
     ["Common Summer Egg"] = {["Starfish"] = 50, ["Seafull"] = 25, ["Crab"] = 25},
     ["Rare Summer Egg"] = {["Flamingo"] = 30, ["Toucan"] = 25, ["Sea Turtle"] = 20, ["Orangutan"] = 15, ["Seal"] = 10},
     ["Paradise Egg"] = {["Ostrich"] = 43, ["Peacock"] = 33, ["Capybara"] = 24, ["Scarlet Macaw"] = 0, ["Mimic Octopus"] = 0},
-    ["Premium Night Egg"] = {["Hedgehog"] = 50, ["Mole"] = 26, ["Frog"] = 14, ["Echo Frog"] = 10}
+    ["Premium Night Egg"] = {["Hedgehog"] = 50, ["Mole"] = 26, ["Frog"] = 14, ["Echo Frog"] = 10},
+    ["Oasis Egg"] = {["Meerkat"] = 45.5, ["Sand Snake"] = 39.5, ["Axolotl"] = 15, ["Hyacinth Macaw"] = 0, ["Fennec Fox"] = 0},
+    ["Premium Oasis Egg"] = {["Meerkat"] = 40, ["Sand Snake"] = 45, ["Axolotl"] = 15},
+    ["Dinosaur Egg"] = {["Raptor"] = 35.5, ["Triceratops"] = 33.5, ["Stegosaurus"] = 28, ["Pterodactyl"] = 3, ["Brontosaurus"] = 0, ["T-Rex"] = 0}
 }
+
 local realESP = {
     ["Common Egg"] = true, ["Uncommon Egg"] = true, ["Rare Egg"] = true,
     ["Common Summer Egg"] = true, ["Rare Summer Egg"] = true
@@ -39,20 +43,19 @@ local realESP = {
 
 local displayedEggs = {}
 local autoRandomizer = false
-local autoHatch = true
 local afkEnabled = true
+local skippedPets = {} -- pets user wants to skip
 
+-- Weighted selection
 local function weightedRandom(pool)
-    local total = 0
-    local valid = {}
+    local total, valid = 0, {}
     for pet, chance in pairs(pool) do
         if chance > 0 then
             table.insert(valid, {pet = pet, chance = chance})
             total += chance
         end
     end
-    local roll = math.random() * total
-    local accum = 0
+    local roll, accum = math.random() * total, 0
     for _, v in ipairs(valid) do
         accum += v.chance
         if roll <= accum then return v.pet end
@@ -60,18 +63,18 @@ local function weightedRandom(pool)
     return valid[1] and valid[1].pet or nil
 end
 
+-- Get non-repeating prediction
 local function getPet(eggName, last)
     local pool = eggChances[eggName]
     if not pool then return nil end
     for _ = 1, 5 do
         local pet = weightedRandom(pool)
-        if pet ~= last or math.random() < 0.3 then
-            return pet
-        end
+        if pet ~= last or math.random() < 0.3 then return pet end
     end
     return last
 end
 
+-- ESP visual
 local function createESP(egg, label)
     local gui = Instance.new("BillboardGui")
     gui.Name = "FakePetESP"
@@ -80,23 +83,23 @@ local function createESP(egg, label)
     gui.StudsOffset = Vector3.new(0, 2.5, 0)
     gui.AlwaysOnTop = true
 
-    local petName = Instance.new("TextLabel", gui)
-    petName.Size = UDim2.new(1, 0, 0.5, 0)
-    petName.BackgroundTransparency = 1
-    petName.TextColor3 = Color3.new(1, 1, 1)
-    petName.TextStrokeTransparency = 0
-    petName.TextScaled = true
-    petName.Font = Enum.Font.SourceSansBold
-    petName.Text = label
+    local nameLabel = Instance.new("TextLabel", gui)
+    nameLabel.Size = UDim2.new(1, 0, 0.5, 0)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.TextColor3 = Color3.new(1, 1, 1)
+    nameLabel.TextStrokeTransparency = 0
+    nameLabel.TextScaled = true
+    nameLabel.Font = Enum.Font.SourceSansBold
+    nameLabel.Text = label
 
-    local stats = Instance.new("TextLabel", gui)
-    stats.Size = UDim2.new(1, 0, 0.5, 0)
-    stats.Position = UDim2.new(0, 0, 0.5, 0)
-    stats.BackgroundTransparency = 1
-    stats.TextColor3 = Color3.fromRGB(200, 200, 200)
-    stats.TextScaled = true
-    stats.Font = Enum.Font.SourceSans
-    stats.TextStrokeTransparency = 0.5
+    local stat = Instance.new("TextLabel", gui)
+    stat.Size = UDim2.new(1, 0, 0.5, 0)
+    stat.Position = UDim2.new(0, 0, 0.5, 0)
+    stat.BackgroundTransparency = 1
+    stat.TextColor3 = Color3.fromRGB(200, 200, 200)
+    stat.TextScaled = true
+    stat.Font = Enum.Font.SourceSans
+    stat.TextStrokeTransparency = 0.5
 
     local weight = math.random(8, 14)
     local age = math.random(35, 50)
@@ -104,21 +107,27 @@ local function createESP(egg, label)
         weight = math.random(15, 40)
         age = math.random(20, 45)
     end
-    stats.Text = tostring(weight) .. "kg | Predict: Age " .. tostring(age)
+    stat.Text = tostring(weight) .. "kg | Predict: Age " .. tostring(age)
 
     gui.Parent = egg
     return gui
 end
 
+-- Show ESP
 local function showESP(egg)
     if egg:GetAttribute("OWNER") ~= localPlayer.Name then return end
     local name = egg:GetAttribute("EggName")
     local id = egg:GetAttribute("OBJECT_UUID")
     if not name or not id or displayedEggs[id] then return end
-    local label = realESP[name] and name or name .. " | " .. (getPet(name) or "?")
+
+    local pet = getPet(name)
+    if skippedPets[pet] then return end -- skip ESP if pet is skipped
+
+    local label = realESP[name] and name or name .. " | " .. (pet or "?")
     displayedEggs[id] = {gui = createESP(egg, label)}
 end
 
+-- Remove ESP
 local function removeESP(egg)
     local id = egg:GetAttribute("OBJECT_UUID")
     if id and displayedEggs[id] then
@@ -127,31 +136,29 @@ local function removeESP(egg)
     end
 end
 
+-- Init ESPs
 for _, egg in collectionService:GetTagged("PetEggServer") do
     showESP(egg)
 end
 collectionService:GetInstanceAddedSignal("PetEggServer"):Connect(showESP)
 collectionService:GetInstanceRemovedSignal("PetEggServer"):Connect(removeESP)
 
--- GUI: Toggles
-GUI:CreateToggle({
+-- Dropdown for skip pets
+local petList = {"Raccoon", "Dragonfly", "Red Fox", "Queen Bee", "Mimic Octopus", "Disco Bee", "Butterfly", "T-Rex"}
+GUI:CreateDropdown({
     parent = tab,
-    text = "✅ Anti-AFK",
-    default = true,
-    callback = function(val)
-        afkEnabled = val
+    text = "Skip Pet Hatch",
+    options = petList,
+    callback = function(pet)
+        skippedPets[pet] = not skippedPets[pet]
+        GUI:CreateNotify({
+            title = "Pet Toggle",
+            text = pet .. (skippedPets[pet] and " will be skipped" or " will NOT be skipped")
+        })
     end
 })
 
-GUI:CreateToggle({
-    parent = tab,
-    text = "🛑 Auto Hatch",
-    default = true,
-    callback = function(val)
-        autoHatch = val
-    end
-})
-
+-- Toggle: Auto Randomizer
 GUI:CreateToggle({
     parent = tab,
     text = "🎲 Auto Randomizer",
@@ -177,18 +184,17 @@ GUI:CreateToggle({
     end
 })
 
-GUI:CreateButton({
+-- Toggle: Anti-AFK
+GUI:CreateToggle({
     parent = tab,
-    text = "ℹ️ Info",
-    callback = function()
-        GUI:CreateNotify({
-            title = "Info",
-            text = "Skips: Raccoon, Dragonfly, Queen Bee, Red Fox, Disco Bee, Butterfly."
-        })
+    text = "✅ Anti-AFK",
+    default = true,
+    callback = function(val)
+        afkEnabled = val
     end
 })
 
--- Anti-AFK
+-- Anti-AFK logic
 players.LocalPlayer.Idled:Connect(function()
     if afkEnabled then
         vu:Button2Down(Vector2.new(0, 0), cam.CFrame)
